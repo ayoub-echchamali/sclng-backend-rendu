@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,6 +15,14 @@ import (
 )
 
 func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[string]string) error {
+	languageParam := r.URL.Query().Get("languages")
+
+	filterByLanguage := false
+
+	if languageParam != "" {
+		filterByLanguage = true
+	}
+
 	repos, err := githubapi.FetchRepos(s.Config.GithubToken)
 	if err != nil {
 		message := "Error while fetching repositories"
@@ -40,6 +49,7 @@ func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[strin
 		wg.Add(1)
 
 		go func(repo githubapi.Repository) {
+			match := false
 
 			defer wg.Done()
 
@@ -54,13 +64,23 @@ func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[strin
 
 			if err == nil {
 				for lang, bytes := range languages {
+					if filterByLanguage && !match && strings.EqualFold(lang,languageParam) {
+						match = true
+					}
 					repoDto.Languages[lang] = dto.LanguageDto{Bytes: bytes}
 				}
 			} else {
 				log.Errorf("Failed to fetch language for %s/%s with error: %v", repo.Owner.Login, repo.FullName, err)
 			}
 
-			resultChan <- repoDto
+			if filterByLanguage {
+				if match {
+					resultChan <- repoDto
+				}
+			} else {
+				resultChan <- repoDto
+			}
+
 		}(repo)
 	}
 
