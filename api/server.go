@@ -8,6 +8,7 @@ import (
 	"github.com/Scalingo/go-handlers"
 	"github.com/Scalingo/go-utils/logger"
 	"github.com/Scalingo/sclng-backend-test-v1/config"
+	"github.com/Scalingo/sclng-backend-test-v1/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,12 +17,13 @@ type ApiServer struct {
 	Config *config.Config
 }
 
-func NewApiServer(token string) *ApiServer {
+func NewApiServer(cfg *config.Config) *ApiServer {
 	log.Info("creating server instance...")
 	log := logger.Default()
-	log.Info("creating api server with github token")
+	log.Infof("Creating api server with github token %s", util.Substring(cfg.GithubToken, 0, 9))
 	return &ApiServer{
 		Router: handlers.NewRouter(log),
+		Config: cfg,
 	}
 }
 

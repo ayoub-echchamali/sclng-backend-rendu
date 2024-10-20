@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	Port int `json:port`
-	GithubToken string `json:string`
+	Port int `json:"port"`
+	GithubToken string `json:"github_token"`
 }
 
 func ReadConfig() (*Config, error) {

@@ -25,5 +25,9 @@ type Repository struct {
 
 type Repositories []Repository
 
+type ErrorResponse struct {
+	Message         string `json:"message"`
+	DocumentationURL string `json:"documentation_url"`
+}
 
 // LANGUAGES

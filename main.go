@@ -16,7 +16,7 @@ func main() {
 		log.WithError(err).Error("Fail to initialize configuration.")
 		os.Exit(1)
 	}
-	server := api.NewApiServer(cfg.GithubToken)
+	server := api.NewApiServer(cfg)
 	server.ServeAndListen(cfg.Port)
 }
 
