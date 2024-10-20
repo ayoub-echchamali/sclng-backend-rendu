@@ -1,9 +1,8 @@
-# Canvas for Backend Technical Test at Scalingo
+# Submission for "hard-skill" Scalingo
 
-## Instructions
 
-* From this canvas, respond to the project which has been communicated to you by our team
-* Feel free to change everything
+## Introduction
+
 
 ## Execution
 
@@ -19,3 +18,14 @@ Application will be then running on port `5000`
 $ curl localhost:5000/ping
 { "status": "pong" }
 ```
+
+## Notes
+
+From Github API Docs:
+
+`
+The primary rate limit for unauthenticated requests is 60 requests per hour.
+`
+
+To increase that number to 5000, please specify a github jwt token in the configuration file: `config.json`
+
