@@ -15,6 +15,7 @@ import (
 type ApiServer struct {
 	Router *handlers.Router
 	Config *config.Config
+	Cache map[string]Cache
 }
 
 func NewApiServer(cfg *config.Config) *ApiServer {
@@ -24,6 +25,7 @@ func NewApiServer(cfg *config.Config) *ApiServer {
 	return &ApiServer{
 		Router: handlers.NewRouter(log),
 		Config: cfg,
+		Cache: make(map[string]Cache),
 	}
 }
 
@@ -36,3 +38,4 @@ func (s *ApiServer) ServeAndListen(port int) {
 		os.Exit(2)
 	}
 }
+

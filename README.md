@@ -4,6 +4,25 @@
 ## Introduction
 This is the submission that answers the Scanlingo hard skill test. The goal from this test is to create a REST API that can deliver the last 100 public repositories hosted on github.com.
 
+`
+Note: to use the full features of the solution, it is recommended to add a config.json file containing a github issued authorization token. This helps lift the rate limiting from 60 to 5000.
+See notes section at the end of file.
+`
+
+Since the endpoint is public and doesn't rely on user session, it can be cached to avoid spamming the github api in case of heavy traffic.
+
+This enables the API to answer as many users as possible simultaneously, limited only by network speed. 
+
+Read the pdf reports to see the performance achieved with this implementation.
+
+Two reports have been generated thanks to postman, one that tests the `/publicGithubRepos` alone, with 40 users. With a rate limit of 5000 calls/hour, the tests run smothly for about 3 minutes before reaching the limit.
+
+The second report, runs multiple types of queries (classic one, with one language filter, with multiple languages filter) for each user, this time their number has been reduced to 20. The test runs smoothly for about a minute. 
+
+There could be further features possible to optimize the cache and by consequence the performance, such as:
+- cache sharing between endpoints, so that filters can be applied to unfiltered query too
+- if two or more requests come simultaneously, and cache is invalidated, wait for cache revalidation and then answer both requests.
+
 # Project Contents
 
 ## api
@@ -14,6 +33,8 @@ API scaffolding specification
 
 Contains the controller functions that parse the request, executes the necessary functions to build the response, and returns the built object. Uses DTOs to build consistent response object.
 
+For simplicty, most of the logic was kept in the handler function, but it's possible to better refactor the code with dedicated query params and caching middleware, but I felt that was beyond the scope of this test.
+
 - [routes.go](api/routes.go)
 
 Defines the API routes.
@@ -21,6 +42,10 @@ Defines the API routes.
 - [server.go](api/server.go)
 
 Creates server instance and listens with speicifed port inside the configuration.
+
+- [cache.go](api/cache.go)
+
+Contains the code necessary to read and write into the basic cache for the API. 
 
 ## config
 

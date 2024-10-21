@@ -16,6 +16,14 @@ import (
 )
 
 func (s *ApiServer) getGithubPublicRepositories(w http.ResponseWriter, r *http.Request, _ map[string]string) error {
+
+	cacheEntry, exists := s.ReadCache(r.RequestURI)
+    if exists && time.Since(cacheEntry.LastUpdated) < 60*time.Second {
+        log.Info("Serving from cache")
+		util.RespondWithJSON(w, http.StatusOK, cacheEntry.Content)
+		return nil
+	}
+
 	// this returns an array of strings
 	// typical url is /repos?language=ruby&language=javascript
 	languagesParam := r.URL.Query()["language"]
@@ -137,6 +145,8 @@ func (s *ApiServer) getGithubPublicRepositories(w http.ResponseWriter, r *http.R
 	reposDto.TotalItems = count
 
 	util.RespondWithJSON(w, http.StatusOK, reposDto)
+
+	s.WriteCache(r.RequestURI, reposDto)
 
 	// defer close channel when function exits
 	return nil
