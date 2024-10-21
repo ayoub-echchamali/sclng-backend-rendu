@@ -15,33 +15,47 @@ import (
 )
 
 func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[string]string) error {
-	languageParam := r.URL.Query().Get("languages")
+	// this returns an array of strings
+	// typical url is /repos?language=ruby&language=javascript
+	languagesParam := r.URL.Query()["language"]
+	licensesParam := r.URL.Query()["license"]
 
 	filterByLanguage := false
+	filterByLicense := false
 
-	if languageParam != "" {
+	if len(languagesParam) > 0 {
 		filterByLanguage = true
 	}
+	if len(licensesParam) > 0 {
+		filterByLicense = true
+	}
 
+	// Fetching the 100 repos
 	repos, err := githubapi.FetchRepos(s.Config.GithubToken)
 	if err != nil {
 		message := "Error while fetching repositories"
 		log.WithError(err).Error(message)
+		// If error, respond with a 500
 		util.RespondWithError(w, http.StatusInternalServerError, message)
 		return err
 	}
 
+	// response dto
 	var reposDto dto.RepositoriesDto
 
+	// Github concurrent rate limiting is 100, we will specify then 100 workers
 	workerCount := 100
+
+	// each worker will push the result of his work into a channel 
 	resultChan := make(chan dto.RepositoryDto, workerCount)
 	defer close(resultChan)
 
+	// These variables help keep track of the api calls rate 
 	var mu sync.Mutex
-
 	var remainingRequests int
 	var resetTime time.Time
 	var rateLimitHit bool
+	count := 0
 
 	var wg sync.WaitGroup
 
@@ -49,7 +63,9 @@ func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[strin
 		wg.Add(1)
 
 		go func(repo githubapi.Repository) {
-			match := false
+			// This flag helps check if at least one language matches the query params
+			matchLanguage := false
+			matchLicense := false
 
 			defer wg.Done()
 
@@ -57,44 +73,88 @@ func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[strin
 				FullName:   repo.FullName,
 				Owner:      repo.Owner.Login,
 				Repository: repo.Name,
+				URL:        repo.URL,
+				License:    repo.License,
 				Languages:  make(map[string]dto.LanguageDto),
 			}
 
 			languages, err := githubapi.FetchLanguagesWithRateLimit(repo.Owner.Login, repo.Name, s.Config.GithubToken, &remainingRequests, &resetTime, &mu, &rateLimitHit)
 
 			if err == nil {
+				/* 
+					Here we do two things:
+					- if language filtering is enabled, we loop through the languages specified to see if there is a match
+					- build the dto for the response
+				*/
 				for lang, bytes := range languages {
-					if filterByLanguage && !match && strings.EqualFold(lang,languageParam) {
-						match = true
+					if filterByLanguage {
+						for _, langParam := range languagesParam{
+							if !matchLanguage && strings.EqualFold(lang,langParam) {
+								matchLanguage = true
+								break
+							}
+						}
 					}
 					repoDto.Languages[lang] = dto.LanguageDto{Bytes: bytes}
+				}
+				if filterByLicense {
+					for _, license := range licensesParam{
+						if !matchLicense && strings.EqualFold(license, repo.License) {
+							matchLicense = true
+							break
+						}
+					}
 				}
 			} else {
 				log.Errorf("Failed to fetch language for %s/%s with error: %v", repo.Owner.Login, repo.FullName, err)
 			}
 
-			if filterByLanguage {
-				if match {
-					resultChan <- repoDto
-				}
-			} else {
+			/* 
+				If filtering is enabled, and we have a match, the dto is pushed into the channel
+				If no match, the repo is ignored.
+				If filtering is not enabled, the repo is directly pushed.
+			*/
+			if shouldIncludeRepo(filterByLanguage, filterByLicense, matchLanguage, matchLicense) {
 				resultChan <- repoDto
 			}
-
 		}(repo)
 	}
 
+	// This routine reads from the channel to build the final dto
 	go func() {
 		for repoDto := range resultChan {
 			reposDto.Repositories = append(reposDto.Repositories, repoDto)
+			count++
 		}
 	}()
 
 	wg.Wait()
 
+	reposDto.TotalItems = count
+
 	util.RespondWithJSON(w, http.StatusOK, reposDto)
 
+	// defer close channel when function exits
 	return nil
+}
+
+func shouldIncludeRepo(filterByLanguage, filterByLicense, matchLanguage, matchLicense bool) bool {
+	// if any filter is enabled
+	if filterByLanguage || filterByLicense {
+		// return matchLanguage if filterByLanguage is enabled and filterByLicense is not
+		if filterByLanguage && !filterByLicense {
+			return matchLanguage
+		}
+		if filterByLanguage && filterByLicense {
+			return matchLanguage && matchLicense
+		}
+		// return matchLicense if filterByLicense is enabled and filterByLanguage is not
+		if !filterByLanguage && filterByLicense {
+			return matchLicense
+		}
+	}
+	// if no filtering is specified, include repo
+	return true
 }
 
 func pongHandler(w http.ResponseWriter, r *http.Request, _ map[string]string) error {

@@ -11,16 +11,12 @@ type Owner struct {
 
 type Repository struct {
 	ID           int    `json:"id"`
-	NodeID       string `json:"node_id"`
 	Name         string `json:"name"`
 	FullName     string `json:"full_name"`
-	Private      bool   `json:"private"`
-	Owner        Owner  `json:"owner"`
-	HTMLURL      string `json:"html_url"`
-	Description  string `json:"description"`
-	Fork         bool   `json:"fork"`
 	URL          string `json:"url"`
+	Owner        Owner  `json:"owner"`
 	LanguagesURL string `json:"languages_url"`
+	License      string `json:"license"`
 }
 
 type Repositories []Repository
