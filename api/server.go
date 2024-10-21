@@ -29,7 +29,7 @@ func NewApiServer(cfg *config.Config) *ApiServer {
 
 func (s *ApiServer) ServeAndListen(port int) {
 	log.Infof("initializing routes and listening on %v", port) 
-	s.createRoutes()
+	s.CreateRoutes()
 	err := http.ListenAndServe(fmt.Sprintf(":%d", port), s.Router)
 	if err != nil {
 		log.WithError(err).Error("Fail to listen to the given port")

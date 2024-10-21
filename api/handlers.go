@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[string]string) error {
+func (s *ApiServer) getGithubPublicRepositories(w http.ResponseWriter, r *http.Request, _ map[string]string) error {
 	// this returns an array of strings
 	// typical url is /repos?language=ruby&language=javascript
 	languagesParam := r.URL.Query()["language"]
@@ -31,10 +32,10 @@ func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[strin
 	}
 
 	// Fetching the 100 repos
-	repos, err := githubapi.FetchRepos(s.Config.GithubToken)
+	repos, err := githubapi.FetchPublicRepos(s.Config.GithubToken)
 	if err != nil {
 		message := "Error while fetching repositories"
-		log.WithError(err).Error(message)
+		log.Error(fmt.Sprintf("%v: %v", message, err))
 		// If error, respond with a 500
 		util.RespondWithError(w, http.StatusInternalServerError, message)
 		return err
@@ -44,7 +45,10 @@ func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[strin
 	var reposDto dto.RepositoriesDto
 
 	// Github concurrent rate limiting is 100, we will specify then 100 workers
-	workerCount := 100
+	workerCount := 60
+	if s.Config.GithubToken != "" {
+		workerCount = 100
+	}
 
 	// each worker will push the result of his work into a channel 
 	resultChan := make(chan dto.RepositoryDto, workerCount)
@@ -78,7 +82,7 @@ func (s *ApiServer) getRepos(w http.ResponseWriter, r *http.Request, _ map[strin
 				Languages:  make(map[string]dto.LanguageDto),
 			}
 
-			languages, err := githubapi.FetchLanguagesWithRateLimit(repo.Owner.Login, repo.Name, s.Config.GithubToken, &remainingRequests, &resetTime, &mu, &rateLimitHit)
+			languages, err := githubapi.FetchRepoLanguages(repo.Owner.Login, repo.Name, s.Config.GithubToken, &remainingRequests, &resetTime, &mu, &rateLimitHit)
 
 			if err == nil {
 				/* 

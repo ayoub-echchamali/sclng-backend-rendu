@@ -1,6 +1,6 @@
 package api
 
-func (s *ApiServer) createRoutes() {
+func (s *ApiServer) CreateRoutes() {
 	s.Router.HandleFunc("/ping", pongHandler)
-	s.Router.HandleFunc("/repos", s.getRepos)
+	s.Router.HandleFunc("/publicGithubRepos", s.getGithubPublicRepositories)
 }

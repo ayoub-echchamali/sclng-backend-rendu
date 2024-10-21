@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func FetchRepos(token string) (Repositories, error) {
+func FetchPublicRepos(token string) (Repositories, error) {
 	// creating http request with necessary headers
 	url := "https://api.github.com/repositories"
 	headers := map[string]string{
@@ -50,7 +50,7 @@ func FetchRepos(token string) (Repositories, error) {
 }
 
 
-func FetchLanguagesWithRateLimit(owner, repo, token string, remainingRequests *int, resetTime *time.Time, mu *sync.Mutex, rateLimitHit *bool) (map[string]int, error) {
+func FetchRepoLanguages(owner, repo, token string, remainingRequests *int, resetTime *time.Time, mu *sync.Mutex, rateLimitHit *bool) (map[string]int, error) {
 	// Check if rate limit has already been hit
 	mu.Lock()
 	if *rateLimitHit {

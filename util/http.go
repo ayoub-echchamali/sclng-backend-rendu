@@ -26,8 +26,13 @@ func SendRequest(method, url string, headers map[string]string, body io.Reader) 
 
 	// Check for HTTP error responses
 	if response.StatusCode != http.StatusOK {
-		return response, fmt.Errorf("received non-200 response: %s", response.Status)
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			return response, fmt.Errorf("error reading response body: %v", err)
+		}
+		return response, fmt.Errorf("received non-200 response: %s with body: %s", response.Status, string(bodyBytes))
 	}
+	
 
 	return response, nil
 }

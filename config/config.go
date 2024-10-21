@@ -13,11 +13,14 @@ type Config struct {
 	GithubToken string `json:"github_token"`
 }
 
-func ReadConfig() (*Config, error) {
+func ReadConfig(useDefault bool) (*Config, error) {
 	// Default config
 	defaultConfig := Config{
 		Port: 5000,
 		GithubToken: "",
+	}
+	if useDefault {
+		return &defaultConfig, nil
 	}
 	absConfigPath, _ := filepath.Abs("config.json")
 	file, err := os.Open(absConfigPath)

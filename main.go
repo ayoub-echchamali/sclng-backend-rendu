@@ -11,7 +11,7 @@ import (
 func main() {
 	log := logger.Default()
 	log.Info("Initializing app")
-	cfg, err := config.ReadConfig()
+	cfg, err := config.ReadConfig(false)
 	if err != nil {
 		log.WithError(err).Error("Fail to initialize configuration.")
 		os.Exit(1)
